@@ -20,8 +20,8 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/your-org/Open-AutoGLM.git
-cd Open-AutoGLM
+git clone https://github.com/Luckybalabala/llama-cpp-AutoGLM.git
+cd llama-cpp-AutoGLM
 
 # 2. 安装依赖
 pip install -r requirements.txt
@@ -272,8 +272,8 @@ adb connect 192.168.x.x:port
 
 ## 📞 联系方式
 
-- **Issues**: [GitHub Issues](https://github.com/your-org/Open-AutoGLM/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/Open-AutoGLM/discussions)
+- **Issues**: [GitHub Issues](https://github.com/Luckybalabala/llama-cpp-AutoGLM/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Luckybalabala/llama-cpp-AutoGLM/discussions)
 - **微信群**: [加入讨论](resources/WECHAT.md)
 
 ## 🗺️ 路线图
@@ -297,9 +297,9 @@ adb connect 192.168.x.x:port
 
 ## 📈 项目状态
 
-![GitHub stars](https://img.shields.io/github/stars/your-org/Open-AutoGLM?style=social)
-![GitHub forks](https://img.shields.io/github/forks/your-org/Open-AutoGLM?style=social)
-![GitHub issues](https://img.shields.io/github/issues/your-org/Open-AutoGLM)
+![GitHub stars](https://img.shields.io/github/stars/Luckybalabala/llama-cpp-AutoGLM?style=social)
+![GitHub forks](https://img.shields.io/github/forks/Luckybalabala/llama-cpp-AutoGLM?style=social)
+![GitHub issues](https://img.shields.io/github/issues/Luckybalabala/llama-cpp-AutoGLM)
 
 ---
 
