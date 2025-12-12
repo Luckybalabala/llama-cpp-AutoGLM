@@ -16,27 +16,29 @@
 
 ## 🚀 快速开始
 
-### 5 分钟上手
+### 编译 llama.cpp
 
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/Luckybalabala/llama-cpp-AutoGLM.git
 cd llama-cpp-AutoGLM
 
-# 2. 安装依赖
-pip install -r requirements.txt
+# 2. 编译（Windows + CUDA）
+mkdir build
+cd build
+cmake .. -DGGML_CUDA=ON
+cmake --build . --config Release
 
-# 3. 启动服务器（新终端）
-cd llama-cpp-bin
-.\llama-server.exe --model ../models/converted/AutoGLM-Phone-9B-Q4_K_S.gguf \
-  --mmproj ../models/converted/AutoGLM-Phone-9B-mmproj.gguf \
+# 3. 转换 GLM-4V 模型
+python convert_hf_to_gguf.py /path/to/AutoGLM-Phone-9B --outtype q4_k_s
+python convert_hf_to_gguf.py /path/to/AutoGLM-Phone-9B --mmproj --outtype f16
+
+# 4. 启动服务器
+.\build\bin\Release\llama-server.exe \
+  --model AutoGLM-Phone-9B-Q4_K_S.gguf \
+  --mmproj mmproj-AutoGLM-Phone-9B-f16.gguf \
   --port 8080 --ctx-size 16384 --n-gpu-layers 99
-
-# 4. 执行任务
-python main.py --base-url http://localhost:8080/v1 "打开微信"
 ```
-
-详细教程：[快速开始指南](QUICK_START_GGUF.md)
 
 ## 📊 性能指标
 
@@ -53,44 +55,54 @@ python main.py --base-url http://localhost:8080/v1 "打开微信"
 
 ## 🎯 核心功能
 
-### 1. GGUF 模型转换
+### 1. GLM-4V GGUF 转换支持
+
+本 fork 添加了完整的 GLM-4V/AutoGLM 模型转换支持：
 
 ```bash
 # 语言模型转换
-python llama.cpp/convert_hf_to_gguf.py models/AutoGLM-Phone-9B \
+python convert_hf_to_gguf.py /path/to/AutoGLM-Phone-9B \
     --outtype q4_k_s \
-    --outfile models/converted/AutoGLM-Phone-9B-Q4_K_S.gguf
+    --outfile AutoGLM-Phone-9B-Q4_K_S.gguf
 
-# 视觉编码器转换
-.\generate_mmproj_simple.ps1
+# 视觉编码器转换（mmproj）
+python convert_hf_to_gguf.py /path/to/AutoGLM-Phone-9B \
+    --mmproj \
+    --outtype f16
 ```
 
-支持的量化格式：Q4_K_S, Q4_K_M, Q5_K_S, Q8_0, F16
+**支持的量化格式**：Q4_K_S, Q4_K_M, Q5_K_S, Q8_0, F16
 
 ### 2. 多模态推理
 
-```python
-from phone_agent.model import ModelClient
+使用 OpenAI 兼容 API：
 
-client = ModelClient("http://localhost:8080/v1")
-response = client.request(
-    text="这是什么？",
-    image_base64=screenshot_b64
+```python
+import base64
+import requests
+
+# 发送图像+文本请求
+with open("image.jpg", "rb") as f:
+    image_base64 = base64.b64encode(f.read()).decode()
+
+response = requests.post(
+    "http://localhost:8080/v1/chat/completions",
+    json={
+        "model": "AutoGLM-Phone-9B",
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "描述这张图片"},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+            ]
+        }]
+    }
 )
 ```
 
-### 3. 手机自动化
+### 3. 与 AutoGLM 项目集成
 
-```bash
-# 打开应用
-python main.py --base-url http://localhost:8080/v1 "打开微信"
-
-# 复杂任务
-python main.py --base-url http://localhost:8080/v1 \
-  "在微信搜索autoGLM群并发送消息：测试成功"
-```
-
-支持操作：Launch, Tap, Type, Swipe, Back, Home
+配合 [AutoGLM](https://github.com/THUDM/AutoGLM) 项目使用，实现手机自动化控制。
 
 ## 🔧 技术架构
 
@@ -121,54 +133,56 @@ if (model.class_embedding != nullptr) {
 }
 ```
 
-### 关键文件修改
+### 关键代码修改
 
-| 文件 | 修改内容 | 状态 |
+| 文件 | 修改内容 | 说明 |
 |------|---------|------|
-| `llama.cpp/tools/mtmd/clip.cpp` | InternVL 架构适配 | ✅ |
-| `llama.cpp/convert_hf_to_gguf.py` | GLM-4V 转换支持 | ✅ |
-| `phone_agent/model/client.py` | API 兼容性改进 | ✅ |
+| `convert_hf_to_gguf.py` | 新增 `Glm4vVisionModel` 类 | 支持 GLM-4V mmproj 转换 |
+| `tools/mtmd/clip.cpp` | 修改 `build_internvl()` | 支持可选 CLS token |
+| `gguf-py/gguf/constants.py` | 添加 INTERNVL projector | GLM-4V 使用此 projector 类型 |
 
-## 📚 文档
+## 📚 相关文档
 
-- 📖 [快速开始](QUICK_START_GGUF.md) - 5分钟上手指南
-- 📝 [完整技术文档](GLM4V_GGUF_COMPLETE.md) - 深入技术细节
-- 🔄 [更新日志](CHANGELOG_GGUF.md) - 版本变更记录
-- 🛠️ [mmproj 生成指南](MMPROJ_GENERATION_GUIDE.md) - 转换教程
-- 🤝 [贡献指南](CONTRIBUTING_GGUF.md) - 参与开发
+- 📖 [llama.cpp 构建指南](docs/build.md) - 编译说明
+- 📝 [多模态支持](tools/mtmd/README.md) - mmproj 使用指南
+- � [AutoGLM 项目](https://github.com/THUDM/AutoGLM) - 手机自动化
+- � [GLM-4V 模型](https://huggingface.co/THUDM/glm-4v-9b) - Hugging Face
 
 ## 🎓 使用示例
 
-### 基础用法
+### 使用 llama-cli 测试
 
-```python
-# 示例 1: 打开应用
-python main.py --base-url http://localhost:8080/v1 "打开微信"
-
-# 示例 2: 导航操作
-python main.py --base-url http://localhost:8080/v1 "返回主屏幕"
-
-# 示例 3: 搜索和发送
-python main.py --base-url http://localhost:8080/v1 \
-  "在微信搜索autoGLM并发送：你好"
+```bash
+# 文本+图像输入
+.\build\bin\Release\llama-cli \
+  -m AutoGLM-Phone-9B-Q4_K_S.gguf \
+  --mmproj mmproj-AutoGLM-Phone-9B-f16.gguf \
+  -p "描述这张图片" \
+  --image screenshot.jpg
 ```
 
-### 高级用法
+### 使用 curl 测试 API
 
-```python
-from phone_agent import PhoneAgent
-from phone_agent.model import ModelConfig
+```bash
+# 启动服务器
+.\build\bin\Release\llama-server.exe \
+  -m AutoGLM-Phone-9B-Q4_K_S.gguf \
+  --mmproj mmproj-AutoGLM-Phone-9B-f16.gguf \
+  --port 8080 -ngl 99 -c 16384
 
-# 自定义配置
-config = ModelConfig(
-    base_url="http://localhost:8080/v1",
-    model_name="AutoGLM-Phone-9B",
-    temperature=0.0,
-    max_tokens=500
-)
-
-agent = PhoneAgent(config)
-result = agent.execute_task("你的任务")
+# 发送请求（需要先将图像转为 base64）
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4-vision-preview",
+    "messages": [{
+      "role": "user",
+      "content": [
+        {"type": "text", "text": "这是什么？"},
+        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,<BASE64>"}}
+      ]
+    }]
+  }'
 ```
 
 ## 🔍 技术细节
@@ -243,18 +257,18 @@ adb start-server
 adb connect 192.168.x.x:port
 ```
 
-更多问题：[快速开始指南 - 常见问题](QUICK_START_GGUF.md#常见问题)
+更多问题：查看 [Issues](https://github.com/Luckybalabala/llama-cpp-AutoGLM/issues)
 
 ## 🤝 贡献
 
 欢迎各种形式的贡献！
 
-- 🐛 报告 Bug
-- 💡 提出功能建议
-- 📝 改进文档
-- 🔧 提交代码
+- 🐛 报告 Bug - 通过 GitHub Issues
+- 💡 提出功能建议 - 通过 GitHub Discussions
+- 📝 改进文档 - 提交 Pull Request
+- 🔧 提交代码 - Fork 后提交 PR
 
-查看 [贡献指南](CONTRIBUTING_GGUF.md) 了解详情。
+查看上游 [llama.cpp 贡献指南](CONTRIBUTING.md) 了解代码规范。
 
 ### 贡献者
 
@@ -276,24 +290,22 @@ adb connect 192.168.x.x:port
 - **Discussions**: [GitHub Discussions](https://github.com/Luckybalabala/llama-cpp-AutoGLM/discussions)
 - **微信群**: [加入讨论](resources/WECHAT.md)
 
-## 🗺️ 路线图
+## 🗺️ 实现状态
 
-### 已完成 ✅
-- [x] GLM-4V GGUF 转换
-- [x] llama.cpp 集成
-- [x] 手机自动化基础功能
-- [x] 16K 上下文支持
+### ✅ 已完成
+- [x] GLM-4V 语言模型 GGUF 转换
+- [x] GLM-4V 视觉编码器 mmproj 转换
+- [x] InternVL projector 架构适配
+- [x] 可选 CLS token 支持
+- [x] 16K 上下文窗口支持
+- [x] OpenAI 兼容 API
 
-### 进行中 🚧
-- [ ] UI 导航优化
-- [ ] 上下文自动管理
-- [ ] 更多应用支持
-
-### 计划中 📋
-- [ ] Web UI 改进
-- [ ] 批量任务处理
-- [ ] 性能监控
-- [ ] 更多语言支持
+### � 技术实现
+- **Projector Type**: INTERNVL
+- **Vision Encoder**: EVA-CLIP-6B
+- **Text Model**: GLM-4-9B
+- **Context Length**: 16,384 tokens
+- **Output Dimension**: 4096 (从 6144 降维)
 
 ## 📈 项目状态
 
