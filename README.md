@@ -51,7 +51,7 @@ python convert_hf_to_gguf.py /path/to/AutoGLM-Phone-9B --mmproj --outtype f16
 | **推理速度** | ~37 tokens/sec |
 | **平均任务时长** | 3-10秒 |
 
-测试环境：RTX 4090, 32GB RAM, CUDA 12.4
+测试环境：RTX 4060 8GB, 32GB RAM, CUDA 12.4
 
 ## 🎯 核心功能
 
